@@ -1,0 +1,9 @@
+torch
+transformers
+datasets
+peft
+jaxtyping
+pandas
+matplotlib
+numpy
+scipy
