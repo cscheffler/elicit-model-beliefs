@@ -67,19 +67,10 @@ For this experiment, we don't need the true/false labels since we are measuring 
 
 Open `elicit-model-beliefs.ipynb` and run the cells. The notebook:
 
-1. Loads and expands the dataset (each claim → 8 prompts).
-2. Iterates over a list of model IDs, running each one and saving its results to `results/elicit-beliefs-<model-slug>.pt`.
+1. Loads and expands the dataset — each true/false claim becomes 8 prompts.
+2. Iterates over a list of Hugging Face model IDs, running each one and saving its results to `results/elicit-beliefs-<model-slug>.pt`.
 
 Models are grouped by size into lists (`model_ids_20gb`, `model_ids_24gb`, ...) so each group can be run on an appropriately-sized GPU.
-Pick the group you want by setting:
-
-```python
-model_ids = model_ids_24gb
-target_batch_size = target_batch_size_24gb
-```
-
-The run loop automatically halves the batch size on out-of-memory errors and clears each model from the Hugging Face cache after use to save disk space.
-
 The size groups are labelled with the RunPod GPU tier and approximate hourly prices at the time of running the experiments.
 These are just for guidance.
 Any GPU with enough memory will do.
@@ -98,6 +89,8 @@ This includes some failed runs and other error conditions and should be taken as
 - belief stability vs. model size (the headline figure),
 - token leakage vs. model size, and
 - the sorted results table.
+
+#### Model Size Data
 
 The model parameter counts used on the x-axis are hard-coded in a dictionary in `present-figure-1.ipynb`; add an entry there if you run a model that isn't already listed.
 
