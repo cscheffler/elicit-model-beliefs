@@ -1,0 +1,18 @@
+# Experiment outputs
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Hugging Face cache
+.cache/
+
+# OS / editor
+.DS_Store

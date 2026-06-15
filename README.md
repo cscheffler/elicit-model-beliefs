@@ -11,19 +11,17 @@ This experiment measures that yes/no stability across a range of open-weight mod
 
 ![Belief stability vs model size](figures/plot-belief-stability.png)
 
-**Figure 1: Belief stability vs model size.**
+**Figure: Belief stability vs model size.**
 We ask the model the same factual yes/no question with different prompts and compute the probability of a "Yes" response for all prompts.
-Belief stability is defined in terms of the standard devation of $p_{\text{yes}}$ across all prompts for the same factual question, $s = 1 - 2\,\mathrm{SD}(p_{yes}) \in [0, 1]$.
+Belief stability is defined in terms of the standard deviation of $p_{\text{yes}}$ across all prompts for the same factual question, $s = 1 - 2\,\mathrm{SD}(p_{\text{yes}}) \in [0, 1]$.
+Belief stability rises with model size, but model family matters too.
+Large models (>7B parameters) are reliably stable ($s > 0.92$).
+The smallest models (<3B) are often too inconsistent to tell us anything useful about what they believe.
+The best performers reach $s ≈ 0.98$, for example, Gemma, Qwen2.5, Phi-4 at the larger sizes.
 
-### Main Results and Takeaways
+**Main takeaway:** Before building research work on a small open-weights model, check that it actually has the capability you need.
 
-- Before building research work on a small model, check that it actually has the capability you need.
-- Belief stability rises with model size, but family matters too.
-  Large models (>7B parameters) are reliably stable ($s > 0.92$).
-  The smallest models (<3B) are often too inconsistent to tell us anything useful about what they believe.
-- The best performers reach $s ≈ 0.98$, for example, Gemma, Qwen2.5, Phi-4 at the larger sizes.
-
-The full discussion, the headline figure, and the per-model results table are in the **[write-up](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup)**.
+The full discussion, additional figures, and the per-model results table are in the **[write-up](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup)**.
 
 ## In This Repository
 
@@ -75,19 +73,18 @@ The size groups are labelled with the RunPod GPU tier and approximate hourly pri
 These are just for guidance.
 Any GPU with enough memory will do.
 
-
 #### Compute Cost
 
-A full sweep through the models, using different GPUs matching the model sizes as noted above, used approximately $80 in RunPod credit and approximately 20 compute-hours in total.
+A full sweep through the models, using different GPUs matching the model sizes as noted above, used approximately \$80 in RunPod credit and approximately 20 compute-hours in total.
 This includes some failed runs and other error conditions and should be taken as approximate guidance only.
 
 ### 5. Figures and Tables
 
 `present-figure-1.ipynb` reads every `results/*.pt` file, computes the metrics, and generates:
 
-- certainty vs. model size,
-- belief stability vs. model size (the headline figure),
-- token leakage vs. model size, and
+- belief stability vs. model size (the headline figure above);
+- certainty vs. model size, where certainty quantifies how decisive the model is;
+- token leakage vs. model size, where leakage is the amount of probability mass not assigned to the `yes` and `no` or `true` and `false` tokens;
 - the sorted results table.
 
 #### Model Size Data
