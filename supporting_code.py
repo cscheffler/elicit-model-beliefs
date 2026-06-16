@@ -271,9 +271,9 @@ def first_token_logits(prompts, target_ids, model, tokenizer, batch_size):
     )
 
 
-def logits_to_affirm_prob(logits, labels=None, prompts=None):
+def logits_to_affirm_logit(logits, labels=None, prompts=None):
     """
-    Convert raw target-token logits into P(model affirms the claim).
+    Convert raw target-token logits into log P(model affirms the claim).
 
     The input logits have one row per expanded prompt (claims interleaved with
     PROMPT_TEMPLATES). For each template we do a 2-way softmax over just the two
@@ -289,8 +289,8 @@ def logits_to_affirm_prob(logits, labels=None, prompts=None):
             all four templates.
 
     Returns:
-        p_affirm: (num_claims, num_templates) probability the model affirms each
-            claim, one column per template.
+        logit_p_affirm: (num_claims, num_templates) logit of the probability the
+            model affirms each claim, one column per prompt template.
     """
 
     if prompts is None:
@@ -306,17 +306,28 @@ def logits_to_affirm_prob(logits, labels=None, prompts=None):
         n_claims, len(prompts), len(WORDS)
     )  # (Claim, Template, Word)
 
-    def two_way_prob(logits, pos_col, neg_col):
+    def two_way_affirm_logit(logits, pos_col, neg_col):
         """P(positive) from a 2-way softmax over just the two relevant logits."""
-        pair = torch.stack([logits[:, pos_col], logits[:, neg_col]], dim=1)  # (C, 2)
-        return pair.softmax(dim=1)[:, 0]  # P(positive word)
+        return (
+            logits[:, pos_col] - logits[:, neg_col]
+        )  # logit(P(positive word)). shape: (C,)
+        # pair = torch.stack([logits[:, pos_col], logits[:, neg_col]], dim=1)  # (C, 2)
+        # return pair[:, 0] - pair.logsumexp(dim=1)  # log P(positive word)
 
-    # P(affirmative) for each of the templates, mapped onto a common axis:
-    p_yesno_1 = two_way_prob(logits_by_claim[:, 0], YES, NO)  # Yes or No
-    p_yesno_2 = two_way_prob(logits_by_claim[:, 1], YES, NO)  # No or Yes
-    p_tf_1 = two_way_prob(logits_by_claim[:, 2], TRUE, FALSE)  # True or False
-    p_tf_2 = two_way_prob(logits_by_claim[:, 3], TRUE, FALSE)  # False or True
-    p_affirm = torch.stack([p_yesno_1, p_yesno_2, p_tf_1, p_tf_2], dim=1)  # (C, 4)
+    # logit P(affirmative) for each of the templates, mapped onto a common axis:
+    temp = []
+    for i in range(0, logits_by_claim.shape[1], 4):
+        temp.append(two_way_affirm_logit(logits_by_claim[:, i], YES, NO))  # Yes or No
+        temp.append(
+            two_way_affirm_logit(logits_by_claim[:, i + 1], YES, NO)
+        )  # Yes or No
+        temp.append(
+            two_way_affirm_logit(logits_by_claim[:, i + 2], TRUE, FALSE)
+        )  # Yes or No
+        temp.append(
+            two_way_affirm_logit(logits_by_claim[:, i + 3], TRUE, FALSE)
+        )  # Yes or No
+    logit_p_affirm = torch.stack(temp, dim=1)  # (C, T)
 
     if labels is not None:
         import pandas as pd
@@ -345,7 +356,16 @@ def logits_to_affirm_prob(logits, labels=None, prompts=None):
         print(f"Accuracy (threshold 0.5): {acc:.3f}")
         print(results.groupby("label")["p_affirm_mean"].mean())
 
-    return p_affirm
+    return logit_p_affirm
+
+
+def logits_to_affirm_prob(*args, **kwargs):
+    """
+    Convert raw target-token logits into P(model affirms the claim). See
+    the call signature of `logits_to_affirm_log_prob` for details.
+    """
+    lgt = logits_to_affirm_logit(*args, **kwargs)
+    return torch.special.expit(lgt)
 
 
 def clear_hf_model_cache(model_id):
