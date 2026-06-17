@@ -368,6 +368,64 @@ def logits_to_affirm_prob(*args, **kwargs):
     return torch.special.expit(lgt)
 
 
+def compute_metrics(p_affirm_logit, logits, top_other_logit):
+    """
+    Compute all the metrics used to evaluate models for belief stability.
+
+    Args:
+        p_affirm_logit: (num_claims, num_templates) log-odds of an affirmative
+            response (Yes or True) for each factual claim and prompt template.
+        logits: (num_prompts, num_tokens) target-token logits for each prompt.
+        top_other_logit: (num_prompts,) logit of the most probable token
+            not in WORDS for each prompt.
+
+    Returns:
+        logit_p_affirm: (num_claims, num_templates) logit of the probability the
+            model affirms each claim, one column per prompt template.
+    """
+    import numpy as np
+    from scipy.special import expit, logsumexp
+    from scipy.stats import spearmanr
+
+    p_affirm_logit = np.asarray(p_affirm_logit)  # (Claims, Templates)
+    mean_p_affirm = expit(p_affirm_logit).mean(axis=1)  # (C,)
+    certainty = np.vstack((mean_p_affirm, 1 - mean_p_affirm)).max(axis=0)  # (C,)
+    logit_stdev = p_affirm_logit.std(axis=1)  # (C,)
+
+    # TODO: Leakage is computed is the sum of all other tokens, excluding
+    # Yes, No, True, False, which isn't quite right since we should use either
+    # (Yes, No) or (True, False) as viable tokens and not all 4 of them. That
+    # depends on which prompt template was used though so, for now, this
+    # calculation is good enough.
+    all_logits = torch.hstack((logits, top_other_logit[:, None]))  # (C, Words+1)
+    all_probs = all_logits.softmax(axis=1)  # (C, W+1)
+    leakage = np.array(all_probs[:, 4:].sum(axis=1))  # (C,)
+
+    corr = spearmanr(p_affirm_logit).statistic
+    if np.any(np.isnan(corr)):
+        corr_eig = np.nan
+    else:
+        corr_eig = np.linalg.eig(corr)[0][0] / p_affirm_logit.shape[1]
+
+    def logit_mean_expit(x, axis=None):
+        x = np.asarray(x, dtype=np.float64)
+        sp = np.logaddexp(0.0, x)                       # softplus(x), stable
+        log_num = logsumexp(x - sp, axis=axis)           # log( sum_i expit(x_i) )
+        log_den = logsumexp(-sp, axis=axis)              # log( sum_i (1 - expit(x_i)) )
+        return log_num - log_den
+
+    return {
+        'certainty_dist': certainty,
+        'logit_mean_dist': logit_mean_expit(p_affirm_logit, axis=1),
+        'mean_certainty': np.mean(certainty),
+        'logit_stdev_dist': logit_stdev,
+        'mean_logit_stdev': np.mean(logit_stdev),
+        'spearmanr_corr': corr,
+        'stability': corr_eig,
+        'leakage': np.mean(leakage),
+    }
+
+
 def clear_hf_model_cache(model_id):
     """
     Delete all cached revisions of model_id from the local HuggingFace cache.
