@@ -388,7 +388,9 @@ def compute_metrics(p_affirm_logit, logits, top_other_logit):
     from scipy.stats import spearmanr
 
     p_affirm_logit = np.asarray(p_affirm_logit)  # (Claims, Templates)
-    mean_p_affirm = expit(p_affirm_logit).mean(axis=1)  # (C,)
+    p_affirm = expit(p_affirm_logit)
+    mean_p_affirm = p_affirm.mean(axis=1)  # (C,)
+    std_p_affirm = p_affirm.std(axis=1)  # (C,)
     certainty = np.vstack((mean_p_affirm, 1 - mean_p_affirm)).max(axis=0)  # (C,)
     logit_stdev = p_affirm_logit.std(axis=1)  # (C,)
 
@@ -416,13 +418,15 @@ def compute_metrics(p_affirm_logit, logits, top_other_logit):
 
     return {
         'certainty_dist': certainty,
-        'logit_mean_dist': logit_mean_expit(p_affirm_logit, axis=1),
         'mean_certainty': np.mean(certainty),
+        'logit_mean_dist': logit_mean_expit(p_affirm_logit, axis=1),
         'logit_stdev_dist': logit_stdev,
         'mean_logit_stdev': np.mean(logit_stdev),
         'spearmanr_corr': corr,
         'stability': corr_eig,
         'leakage': np.mean(leakage),
+        'stability_v1': np.mean(1 - 2 * std_p_affirm),
+        'stability_v1_dist': 1 - 2 * std_p_affirm,
     }
 
 

@@ -1,34 +1,42 @@
-# Eliciting LLM Beliefs — and Why Model Size Matters
+# Eliciting LLM Beliefs — And Why Model Size Matters
 
 This repository contains the research code of
-**[LLMs Can Tell You What They Believe — But Size Matters](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup)**.
+**[LLMs Can Reliably Tell You What They Believe — But Size Matters](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup)**.
 
-## Project Overview
+## Project Summary
 
-For AI honesty research, we want to know if we can trust an LLM's true/false answer to a factual claim.
-A model's stated belief is only useful if it is *stable* — that is, if the model gives the same answer when the same question is phrased in slightly different ways.
-This experiment measures that yes/no stability across a range of open-weight models and shows that it depends strongly on model size (and family).
+An honest LLM is one that accurately states its beliefs and acts consistently with its beliefs.
+To do honesty research, we need to know what these models believe and we often do that by asking them.
+Here we measure whether a model's stated yes/no probabilities stay the same when we change how we ask a factual question.
+This is indirect evidence about the internal belief states of the model and we do not attempt to measure those internal states directly.
 
-![Belief stability vs model size](figures/plot-belief-stability.png)
+Models can vary wildly in the stability of their belief statements when the prompt is changed.
+For honesty research, we need stable models — models that assign the same probability to the truth value of a claim when prompted in different ways.
 
-**Figure: Belief stability vs model size.**
+The results show that model size really matters.
+So, if you're an AI safety researcher and you rely on small open weights models for your work, beware!
+You should first check that the model is capable of doing what you need it do to (for me: have stable belief statements) before using it for your research.
+
+![Belief stability vs model size](figures/headline-figure.png)
+
+**Figure: Stability, certainty, and model size.**
 We ask the model the same factual yes/no question with different prompts and compute the probability of a "Yes" response for all prompts.
-Belief stability is defined in terms of the standard deviation of $p_{\text{yes}}$ across all prompts for the same factual question, $s = 1 - 2\,\mathrm{SD}(p_{\text{yes}}) \in [0, 1]$.
-Belief stability rises with model size, but model family matters too.
-Large models (>7B parameters) are reliably stable ($s > 0.92$).
-The smallest models (<3B) are often too inconsistent to tell us anything useful about what they believe.
-The best performers reach $s ≈ 0.98$, for example, Gemma, Qwen2.5, Phi-4 at the larger sizes.
+Certainty is defined as the mean probability of saying either "yes" or "no", whichever is more likely.
+Stability is defined in terms of the correlation of $P(\text{yes})$ between different prompt templates.
+Larger models tend to have more stable "yes" response probabilities and to be more certain about their responses.
 
-**Main takeaway:** Before building research work on a small open-weights model, check that it actually has the capability you need.
-
-The full discussion, additional figures, and the per-model results table are in the **[write-up](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup)**.
+For AI honesty research, we suggest stability > 0.96 as a target since this is where the metric plateaus.
+Models above this level are mostly indistinguishable on prompt consistency.
+Values between 0.90 and 0.96 may be adequate for many purposes, but it's worth checking the correltaion details first — see the [Metrics section in the write-up](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup#metrics).
+Below 0.9, treat the model's elicited probabilities as unreliable.
+See [Table 3 in the write-up](https://cscheffler.github.io/garden/projects/eliciting-llm-beliefs-writeup#table-complete-results) for the full list of models ordered by stability.
 
 ## In This Repository
 
 - `elicit-model-beliefs.ipynb`
   Main experiment.
   Loads each model, runs the dataset through it, and saves the first-token logits to disk.
-- `present-figure-1.ipynb`
+- `all-figures.ipynb`
   Loads the saved results, computes the metrics, and produces the figures and the results table.
 - `supporting_code.py`
   Shared logic: data loading, prompt templates, model loading, logit extraction, and metric computation.
@@ -38,7 +46,7 @@ The full discussion, additional figures, and the per-model results table are in 
   The package versions used for the published run.
   The requirements file pins package names but not versions.
 
-## Reproducing The Results
+## Reproducing the Results
 
 ### 1. Environment
 
@@ -61,7 +69,7 @@ True/False claims come from the **[Azaria & Mitchell True-False dataset](https:/
 It is downloaded automatically from the Hugging Face Hub the first time you run the experiment.
 For this experiment, we don't need the true/false labels since we are measuring what the model believes rather than whether it is correct or not.
 
-### 4. Run The Experiment
+### 4. Run the Experiment
 
 Open `elicit-model-beliefs.ipynb` and run the cells. The notebook:
 
@@ -80,16 +88,16 @@ This includes some failed runs and other error conditions and should be taken as
 
 ### 5. Figures and Tables
 
-`present-figure-1.ipynb` reads every `results/*.pt` file, computes the metrics, and generates:
+`all-figures.ipynb` reads every `results/*.pt` file, computes the metrics, and generates:
 
-- belief stability vs. model size (the headline figure above);
-- certainty vs. model size, where certainty quantifies how decisive the model is;
+- belief stability vs certainty, and each of those vs model size (the headline figure above);
 - token leakage vs. model size, where leakage is the amount of probability mass not assigned to the `yes` and `no` or `true` and `false` tokens;
-- the sorted results table.
+- the sorted results table;
+- correlation matrices, certainty and standard deviation histograms for each model.
 
 #### Model Size Data
 
-The model parameter counts used on the x-axis are hard-coded in a dictionary in `present-figure-1.ipynb`; add an entry there if you run a model that isn't already listed.
+The model parameter counts used on the x-axis are hard-coded in a dictionary in `all-figures.ipynb`; add an entry there if you run a model that isn't already listed.
 
 These numbers were pulled from Hugging Face using:
 
