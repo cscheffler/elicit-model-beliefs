@@ -1,3 +1,4 @@
+import os
 import torch
 import datasets
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
@@ -411,22 +412,22 @@ def compute_metrics(p_affirm_logit, logits, top_other_logit):
 
     def logit_mean_expit(x, axis=None):
         x = np.asarray(x, dtype=np.float64)
-        sp = np.logaddexp(0.0, x)                       # softplus(x), stable
-        log_num = logsumexp(x - sp, axis=axis)           # log( sum_i expit(x_i) )
-        log_den = logsumexp(-sp, axis=axis)              # log( sum_i (1 - expit(x_i)) )
+        sp = np.logaddexp(0.0, x)  # softplus(x), stable
+        log_num = logsumexp(x - sp, axis=axis)  # log( sum_i expit(x_i) )
+        log_den = logsumexp(-sp, axis=axis)  # log( sum_i (1 - expit(x_i)) )
         return log_num - log_den
 
     return {
-        'certainty_dist': certainty,
-        'mean_certainty': np.mean(certainty),
-        'logit_mean_dist': logit_mean_expit(p_affirm_logit, axis=1),
-        'logit_stdev_dist': logit_stdev,
-        'mean_logit_stdev': np.mean(logit_stdev),
-        'spearmanr_corr': corr,
-        'stability': corr_eig,
-        'leakage': np.mean(leakage),
-        'stability_v1': np.mean(1 - 2 * std_p_affirm),
-        'stability_v1_dist': 1 - 2 * std_p_affirm,
+        "certainty_dist": certainty,
+        "mean_certainty": np.mean(certainty),
+        "logit_mean_dist": logit_mean_expit(p_affirm_logit, axis=1),
+        "logit_stdev_dist": logit_stdev,
+        "mean_logit_stdev": np.mean(logit_stdev),
+        "spearmanr_corr": corr,
+        "stability": corr_eig,
+        "leakage": np.mean(leakage),
+        "stability_v1": np.mean(1 - 2 * std_p_affirm),
+        "stability_v1_dist": 1 - 2 * std_p_affirm,
     }
 
 
